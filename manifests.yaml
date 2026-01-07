@@ -171,4 +171,4 @@ spec:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 5 # 设置为 5% 方便测试，生产环境建议 50-70
+        averageUtilization: 50 # 设置为 5% 方便测试，生产环境建议 50-70
