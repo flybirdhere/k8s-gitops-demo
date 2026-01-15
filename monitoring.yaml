@@ -1,0 +1,35 @@
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+spec:
+  project: default
+  # 1. 告诉 ArgoCD 这是一个 Helm Chart
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 65.2.0  # 锁定一个稳定版本
+    helm:
+      # 2. 针对 Kind 环境做一点微调 (关闭一些不必要的组件以节省你 MacBook 的资源)
+      values: |
+        grafana:
+          adminPassword: "admin"  # 设置 Grafana 登录密码为 admin
+        prometheus:
+          prometheusSpec:
+            resources:
+              requests:
+                memory: 400Mi  # 限制内存，防止把你电脑卡死
+  # 3. 部署到 monitoring 命名空间
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  # 4. 自动同步策略
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true  # 如果没有 monitoring 命名空间，自动创建
+      - ServerSideApply=true  # 解决一些字段过大的问题

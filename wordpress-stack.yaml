@@ -1,0 +1,64 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress-deployment
+  labels:
+    app: wordpress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress
+  template:
+    metadata:
+      labels:
+        app: wordpress
+    spec:
+      containers:
+        - name: wordpress
+          image: wordpress:latest
+          # --- 请新增这段资源限制 ---
+          resources:
+            requests:
+              cpu: "100m"  # 正常运行时请求 0.1 核 CPU
+              memory: "100Mi"
+            limits:
+              cpu: "200m"  # 最大允许用到 0.2 核
+              memory: "200Mi"
+          # ------------------------
+          ports:
+            - containerPort: 80
+          env:
+            # 1. 告诉 WordPress 数据库在哪里
+            # 这里填写的必须是你之前定义的 MySQL Service 的名字！
+            - name: WORDPRESS_DB_HOST
+              value: "mysql-service"
+
+            # 2. 数据库用户名 (MySQL 默认 root)
+            - name: WORDPRESS_DB_USER
+              value: "root"
+
+            # 3. 数据库密码 (从 Secret 里读取，严禁明文！)
+            - name: WORDPRESS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: ROOT_PASSWORD
+            
+            # 4. 数据库名称 (WordPress 会自动创建表)
+            - name: WORDPRESS_DB_NAME
+              value: "wordpress"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-service
+spec:
+  type: NodePort  # 第一阶段我们先用 NodePort 方便访问
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30008 # 固定一个端口，方便你在浏览器找
+  selector:
+    app: wordpress

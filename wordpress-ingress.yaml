@@ -1,0 +1,19 @@
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wordpress-ingress
+spec:
+  rules:
+  # 1. 只有访问这个域名的请求，才会被处理
+  - host: my-blog.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            # 2. 转发给 WordPress 的 Service
+            name: wordpress-service
+            port:
+              number: 80

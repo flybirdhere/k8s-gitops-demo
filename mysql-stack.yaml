@@ -1,0 +1,94 @@
+# -------------------
+# 1. 密码金库 (Secret)
+# CKS 考点：不要把密码明文写在 Deployment 里！
+# -------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+type: Opaque
+stringData:
+  # 这里为了演示方便使用 stringData，K8s 会自动将其转为 Base64 存储
+  # 生产环境中，这个密码应该更复杂
+  ROOT_PASSWORD: "password123"
+
+---
+
+# -------------------
+# 2. 持久化声明 (PVC)
+# CKA 考点：Pod 想要存数据，必须先申请“地皮”
+# Kind 集群默认带有一个叫 'standard' 的 StorageClass，会自动帮我们要到地皮
+# -------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce # 只能被一个节点读写
+  resources:
+    requests:
+      storage: 1Gi # 申请 1GB 空间
+  # 这是一个关键点：如果你在云上，这里可以是 gp2/oss；在 Kind 里，置空或用 standard 即可
+  # storageClassName: standard 
+
+---
+
+# -------------------
+# 3. 核心服务 (Service)
+# 作用：给 MySQL 一个固定的内网 IP 和 DNS 名字
+# 未来 WordPress 只需要连接 host: "mysql-service" 即可，不用管 IP 变没变
+# -------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+spec:
+  ports:
+    - port: 3306
+  selector:
+    app: mysql # 流量转发给带有 app: mysql 标签的 Pod
+  clusterIP: None # Headless Service (专家技巧：数据库通常不需要负载均衡 IP，直接对点连接更好)
+
+---
+
+# -------------------
+# 4. 部署控制器 (Deployment)
+# -------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deployment
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  strategy:
+    type: Recreate # 数据库不支持多副本同时写，所以更新策略必须是“先杀旧，再起新”
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - image: mariadb:10.6 # 选用 5.7 版本比较稳定，内存占用比 8.0 小
+          name: mysql
+          env:
+            # 关键：从 Secret 里读取密码注入环境变量
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              value: wordpress
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql # MySQL 默认存放数据的位置
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc # 挂载我们上面申请的 PVC
