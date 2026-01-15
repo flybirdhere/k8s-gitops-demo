@@ -1,0 +1,30 @@
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-app
+  namespace: default
+  labels:
+    app: demo-app
+spec:
+  containers:
+  - name: web
+    # 替换成你的 Docker Hub 用户名
+    image: flybirdhere/my-k8s-app:latest
+    # 关键：设置为 Always，这样每次重启 Pod 都会强制去云端拉最新的 latest 镜像
+    imagePullPolicy: Always
+    ports:
+    - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-app-svc
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: demo-app
+  ports:
+  - port: 80
+    targetPort: 80
