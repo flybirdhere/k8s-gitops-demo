@@ -11,6 +11,7 @@ spec:
     chart: loki-stack
     targetRevision: 2.10.2
     helm:
+      # 注意：下面的 values 必须严格保持缩进
       values: |
         loki:
           commonConfig:
@@ -21,7 +22,6 @@ spec:
             enabled: false
         promtail:
           enabled: true
-          # 关键修改：指定 Loki 的正确地址
           config:
             clients:
               - url: http://logging-loki.monitoring.svc:3100/loki/api/v1/push
