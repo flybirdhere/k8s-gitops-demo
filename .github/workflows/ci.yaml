@@ -1,0 +1,37 @@
+
+name: Build and Push Docker Image
+
+# 触发机制：当 main 分支有代码 push 时触发
+on:
+  push:
+    branches: [ "main" ]
+    # 只有 app 目录下的文件变动时才触发（防止改个 README 也重新打包）
+    paths:
+      - 'app/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # 使用 GitHub 提供的 Linux 虚拟机
+
+    steps:
+      # 1. 把你的代码拉取到虚拟机里
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. 登录 Docker Hub (需要用到账号密码，下面会教你怎么配)
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 3. 构建镜像并推送
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: ./app  # Dockerfile 所在的目录
+          push: true
+          # 自动打两个标签：latest 和 Git 的 commit hash
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/my-k8s-app:latest
+            ${{ secrets.DOCKER_USERNAME }}/my-k8s-app:${{ github.sha }}
