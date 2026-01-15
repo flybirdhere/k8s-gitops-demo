@@ -1,0 +1,50 @@
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-blog
+  namespace: argocd
+spec:
+  project: default
+  source:
+    # 使用 Bitnami 官方的高质量 Helm 仓库
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: wordpress
+    # 指定一个稳定版本，防止未来版本更新导致不兼容
+    targetRevision: 23.0.7
+    helm:
+      # 自定义配置参数
+      values: |
+        # 1. 网络设置：本地环境用 ClusterIP 最稳，配合 port-forward 使用
+        service:
+          type: ClusterIP
+          ports:
+            http: 80
+
+        # 2. WordPress 账号设置 (省得你去 Secret 里查密码了)
+        wordpressUsername: user
+        wordpressPassword: password123
+        wordpressEmail: user@example.com
+        
+        # 3. 数据库设置
+        mariadb:
+          auth:
+            rootPassword: root_password
+            password: mariadb_password
+          primary:
+            persistence:
+              enabled: false  # 实验环境建议关闭持久化，避免 PVC 挂载卡住
+        
+        # 4. WordPress 文件存储
+        persistence:
+          enabled: false      # 同上，重启后数据会重置，但保证能立刻启动
+          
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
