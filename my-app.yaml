@@ -19,7 +19,7 @@ spec:
       containers:
       - name: web
         # 👇 记得这里要换成你的 Docker Hub 用户名
-        image: flybirdhere/my-k8s-app:latest
+        image: flybirdhere/my-k8s-app:8
         imagePullPolicy: Always  # <--- 每次重启必须去云端拉新的，不许用本地缓存
         ports:
         - containerPort: 80
