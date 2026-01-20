@@ -1,20 +1,28 @@
 
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment  # <--- 升级了！以前是 Pod
 metadata:
   name: demo-app
   namespace: default
   labels:
     app: demo-app
 spec:
-  containers:
-  - name: web
-    # 替换成你的 Docker Hub 用户名
-    image: flybirdhere/my-k8s-app:latest
-    # 关键：设置为 Always，这样每次重启 Pod 都会强制去云端拉最新的 latest 镜像
-    imagePullPolicy: Always
-    ports:
-    - containerPort: 80
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-app
+  template:
+    metadata:
+      labels:
+        app: demo-app
+    spec:
+      containers:
+      - name: web
+        # 👇 记得这里要换成你的 Docker Hub 用户名
+        image: flybirdhere/my-k8s-app:latest
+        imagePullPolicy: Always  # <--- 每次重启必须去云端拉新的，不许用本地缓存
+        ports:
+        - containerPort: 80
 ---
 apiVersion: v1
 kind: Service
